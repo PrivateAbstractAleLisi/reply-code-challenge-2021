@@ -1,6 +1,7 @@
 package com.polimi.ingsw;
 
 import javax.lang.model.element.ModuleElement;
+import javax.swing.text.Position;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.*;
@@ -53,6 +54,7 @@ public class Main {
         }
 
         public Antenna coveredBy;
+        public int buildingScore;
     }
 
     static class Antenna implements Comparable<Antenna> {
@@ -236,7 +238,7 @@ public class Main {
     // Data la posizione pos dell'antenna a, calcolo il punteggio di quell'antenna rispetto a
     // tutti i building tali per cui lo score per la coppia (antenna,building) è migliore.
     static int computeHeuristic(Position pos, Antenna a) {
-
+/*
         int heuristicScore = -1;
         for (SkyScraper b : buildings) {
             int distance = distManhattan(new Position(b.X_COORD, b.Y_COORD), pos);
@@ -250,7 +252,8 @@ public class Main {
             else if (score > scoreAntennaBuilding(b.coveredBy, b))
                 heuristicScore = heuristicScore + score; //better score
         }
-        return heuristicScore;
+        return heuristicScore; */
+        return new Random().nextInt()%256;
     }
 
     static class Position {
@@ -282,17 +285,20 @@ public class Main {
 
     public static void main(String[] args) {
 
-        InputParsing parse = new InputParsing("data_scenarios_a_example.in");
-        sortAntennas(piazzabili);
+        InputParsing parse = new InputParsing("data_scenarios_b_mumbai.in");
 
+        System.out.println("lettura file ok");
+        sortAntennas(piazzabili);
+        System.out.println("antenne ordinate");
         List<Antenna> alreadyPlacedAntenna = new ArrayList<>();
 
         boolean solutionIsFound = false;
-
+        int loop = 0;
         for (Antenna a : piazzabili) {
 
             if (solutionIsFound) break; //TODO se non si può piazzare nulla, attivare il flag
-
+            System.out.println("antenna " + loop + " of " + piazzabili.size());
+            loop++;
             for (int j = 0; j < WIDTH; j++) {
                 for (int k = 0; k < HEIGTH; k++) {
 
@@ -302,7 +308,6 @@ public class Main {
                         heuristicValues.put(currentPosition, score);
 
                     }
-
                 }
             }
 
@@ -329,12 +334,13 @@ public class Main {
 
         }
 
+        System.out.println("finito, inizio a stampare output");
         //OUTPUT STAGE
 
         PrintWriter out = null;
 
         try {
-            out = new PrintWriter("output.txt");
+            out = new PrintWriter("output-b.txt");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }

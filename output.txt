@@ -1,5 +1,1 @@
-4
-0  10  7
-2  3  4
-3  0  5
-1  12  2
+after che non funziona un cazzo
