@@ -10,6 +10,7 @@ public class Main {
 
     //case parameters
     public static int WIDTH, HEIGTH, N_BUILDINGS, M_AVA_ANTENNAS;
+    public static int N_REMAINING;
     public static int REWARD = 0;
     public static ArrayList<Antenna> piazzabili = new ArrayList<>();
     public static int placedAntennas = 0; //++ every time we place an antenna
@@ -199,6 +200,7 @@ public class Main {
 
 
                 N_BUILDINGS = stream.nextInt();
+                N_REMAINING = N_BUILDINGS;
                 System.out.println(N_BUILDINGS);
                 M_AVA_ANTENNAS = stream.nextInt();
                 System.out.println(M_AVA_ANTENNAS);
@@ -235,12 +237,32 @@ public class Main {
 // ============================================================//
 
 
+    static ArrayList<SkyScraper> getBuildingsInRange(Position pos, int range) {
+
+        ArrayList<SkyScraper> list = new ArrayList<>();
+        int r_start = Math.max(0, pos.x - range + 1);
+        int r_end = Math.min(WIDTH, pos.x + range + 1);
+        int c_start = Math.max(0, pos.y - range + 1);
+        int c_end = Math.min(HEIGTH, pos.y + range + 1);
+
+        for(int r = r_start; r < r_end; r++) {
+            for(int c = c_start; c < c_end; c++){
+                if(grid[r][c].skyscr != null)
+                    list.add(grid[r][c].skyscr);
+            }
+        }
+        return list;
+    }
+
     // Data la posizione pos dell'antenna a, calcolo il punteggio di quell'antenna rispetto a
     // tutti i building tali per cui lo score per la coppia (antenna,building) è migliore.
     static int computeHeuristic(Position pos, Antenna a) {
-/*
+
+        List<SkyScraper> buildingsInRange = getBuildingsInRange(pos, a.range);
+
         int heuristicScore = -1;
-        for (SkyScraper b : buildings) {
+        for (SkyScraper b : buildingsInRange) {
+            if(b.coveredBy == null){
             int distance = distManhattan(new Position(b.X_COORD, b.Y_COORD), pos);
             if (distance > a.range)
                 continue;
@@ -252,8 +274,9 @@ public class Main {
             else if (score > scoreAntennaBuilding(b.coveredBy, b))
                 heuristicScore = heuristicScore + score; //better score
         }
-        return heuristicScore; */
-        return new Random().nextInt()%256;
+            }
+        return heuristicScore;
+        //return new Random().nextInt()%256;
     }
 
     static class Position {
@@ -295,7 +318,7 @@ public class Main {
         boolean solutionIsFound = false;
         int loop = 0;
         for (Antenna a : piazzabili) {
-
+    
             if (solutionIsFound) break; //TODO se non si può piazzare nulla, attivare il flag
             System.out.println("antenna " + loop + " of " + piazzabili.size());
             loop++;
@@ -321,7 +344,12 @@ public class Main {
                 int distance = distManhattan(new Position(b.X_COORD, b.Y_COORD), bestOne);
                 if (distance > a.range)
                     continue;
-                b.coveredBy = a;
+                if(b.coveredBy == null) {
+                    b.coveredBy = a;
+                    N_REMAINING--;
+                }
+                if(N_REMAINING < 1)
+                    solutionIsFound = true;
 
             }
 
@@ -331,10 +359,10 @@ public class Main {
             alreadyPlacedAntenna.add(a);
             //reset heuristic values
             heuristicValues = new HashMap<>(); //garbage collector does the work
-
+        loop++;
         }
 
-        System.out.println("finito, inizio a stampare output");
+        System.out.println("finito, non va un cazzo");
         //OUTPUT STAGE
 
         PrintWriter out = null;
