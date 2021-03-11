@@ -11,7 +11,7 @@ public class Main {
     public static int WIDTH, HEIGTH, N_BUILDINGS, M_AVA_ANTENNAS;
     public static int REWARD = 0;
     public static ArrayList<Antenna> piazzabili = new ArrayList<>();
-    public int placedAntennas = 0; //++ every time we place an antenna
+    public static int placedAntennas = 0; //++ every time we place an antenna
     public static ArrayList<SkyScraper> buildings = new ArrayList<>();
 
     //====================
@@ -95,7 +95,7 @@ public class Main {
 
     ///// SCORING FUNCTIONS //////
 
-    //s(a,b)
+    //s(a,b), check reachability
     public static int scoreAntennaBuilding(Antenna a, SkyScraper b) {
         return (b.speedWeight * a.connectionSpeed - b.latencyWeight * distManhattan(a, b));
     }
@@ -105,21 +105,25 @@ public class Main {
 
     //s(b) score of building
     public static int scoreBuilding(SkyScraper b) {
+        if(b.coveredBy == null)
+            return 0;
         return scoreAntennaBuilding(b.coveredBy, b);
     }
 
-    public static int getReward() {
-        for (int row = 0; row < grid.length; row++) {
-            for (int col = 0; col < grid[row].length; col++) {
-                if(grid[row][col].skyscr.coveredBy == null)
-                    return 0;
-            }
+    public static int computeReward() {
+        for (SkyScraper b : buildings) {
+            if (b.coveredBy == null)
+                return 0;
         }
         return REWARD;
     }
 
     public static int totalScore() {
-
+        int result = 0;
+        for (SkyScraper b : buildings) {
+                result += scoreBuilding(b);
+        }
+        return result + computeReward();
     }
 
     //r(b)
@@ -188,7 +192,9 @@ public class Main {
                     y = stream.nextInt();
                     l = stream.nextInt();
                     c = stream.nextInt();
-                    grid[x][y].skyscr = new SkyScraper(l, c, x, y);
+                    SkyScraper sky =new SkyScraper(l, c, x, y);
+                    grid[x][y].skyscr = sky;
+                    buildings.add(sky);
                 }
                 for (int j = 0; j < M_AVA_ANTENNAS; j++) {
                     Integer r, c;
@@ -214,13 +220,14 @@ public class Main {
         Writer writer = new OutputStreamWriter(new FileOutputStream(path), UTF8);
         writer.write(placedAntennas);
         writer.write("\n");
+        writer.write();
 
     }
 
 
-
     static int computeHeuristic(Position pos, Antenna a) {
-        return 0;
+
+
     }
 
     static class Position {
@@ -233,7 +240,20 @@ public class Main {
     }
 
     static Map<Position, Integer> heuristicValues;
-    static List<Position> sortedPositions = new SortedList<>();
+
+
+    public Position pickBestPosition() {
+        Position best = new Position(0,0);
+        Integer currentBestValue = -1;
+        for (Position cur : heuristicValues.keySet()) {
+            if (heuristicValues.get(cur) > currentBestValue) {
+                currentBestValue = heuristicValues.get(cur);
+                best = cur;
+            }
+        }
+
+        return best;
+    }
 
     public static void main(String[] args) {
 
@@ -256,9 +276,12 @@ public class Main {
                     }
 
 
+
                 }
             }
 
+            Position bestOne = pickBestPosition();
+            
 
 
 
