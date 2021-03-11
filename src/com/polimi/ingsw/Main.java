@@ -64,15 +64,17 @@ public class Main {
 
         public int X_COORD, Y_COORD;
 
-        public Antenna(int range, int connectionSpeed) {
+        public int id;
+
+        public Antenna(int range, int connectionSpeed, int id) {
             this.range = range;
             this.connectionSpeed = connectionSpeed;
+            this.id = id;
         }
 
         public void placeAntenna(int x, int y) {
             X_COORD = x;
             Y_COORD = y;
-            placedAntennas++;
         }
 
         //a negative integer, zero, or a positive integer as this object is less than,
@@ -87,6 +89,15 @@ public class Main {
                 return +1;
 
         }
+    }
+
+    //
+    public static void updateAndPlaceAntenna (Antenna a, Position pos) {
+        a.placeAntenna(pos.x, pos.y);
+       // placedAntennas++;
+        grid[pos.x][pos.y].antenna = a;
+        assert(grid[pos.x][pos.y].antenna != null);
+
     }
 
     ////// MAP /////
@@ -105,7 +116,7 @@ public class Main {
 
     //s(b) score of building
     public static int scoreBuilding(SkyScraper b) {
-        if(b.coveredBy == null)
+        if (b.coveredBy == null)
             return 0;
         return scoreAntennaBuilding(b.coveredBy, b);
     }
@@ -121,7 +132,7 @@ public class Main {
     public static int totalScore() {
         int result = 0;
         for (SkyScraper b : buildings) {
-                result += scoreBuilding(b);
+            result += scoreBuilding(b);
         }
         return result + computeReward();
     }
@@ -143,15 +154,22 @@ public class Main {
         return result;
     }
 
+
     public static int distManhattan(Antenna a, SkyScraper b) {
         //|x1 - x2| + |y1 - y2|
         int distance = Math.abs(a.X_COORD - b.X_COORD) + Math.abs(a.Y_COORD - b.Y_COORD);
         return distance;
     }
 
+    public static int distManhattan(Position x1, Position x2) {
+        //|x1 - x2| + |y1 - y2|
+        int distance = Math.abs(x1.x - x2.x) + Math.abs(x1.y - x2.y);
+        return distance;
+    }
     public static void sortAntennas(ArrayList<Antenna> list) {
         list.sort((o1, o2) -> o1.compareTo(o2));
     }
+
 
 
 //=============================================================//
@@ -200,7 +218,8 @@ public class Main {
                     Integer r, c;
                     r = stream.nextInt();
                     c = stream.nextInt();
-                    piazzabili.add(new Antenna(r, c));
+                    piazzabili.add(new Antenna(r, c, j));
+
                 }
 
             } catch (FileNotFoundException e) {
@@ -224,10 +243,23 @@ public class Main {
 
     }
 
-
+    // Data la posizione pos dell'antenna a, calcolo il punteggio di quell'antenna rispetto a
+    // tutti i building tali per cui lo score per la coppia (antenna,building) è migliore.
     static int computeHeuristic(Position pos, Antenna a) {
 
+        int heuristicScore = 0;
+        for(SkyScraper b : buildings) {
+            int distance = distManhattan(new Position(b.X_COORD,b.Y_COORD), pos);
+            if(distance > a.range)
+                continue;
+            Antenna tempAnt = new Antenna(a.range, a.connectionSpeed, a.id);
+            tempAnt.placeAntenna(pos.x,pos.y);
+            int score = scoreAntennaBuilding(tempAnt, b);
+            if(score > scoreAntennaBuilding(b.coveredBy, b))
+               heuristicScore = heuristicScore +  score; //better score
 
+        }
+        return heuristicScore;
     }
 
     static class Position {
@@ -239,10 +271,11 @@ public class Main {
         }
     }
 
-    static Map<Position, Integer> heuristicValues;
 
+    static Map<Position, Integer> heuristicValues = new HashMap<>();
 
-    public Position pickBestPosition() {
+    public static Position pickBestPosition() {
+
         Position best = new Position(0,0);
         Integer currentBestValue = -1;
         for (Position cur : heuristicValues.keySet()) {
@@ -255,35 +288,86 @@ public class Main {
         return best;
     }
 
+
+
     public static void main(String[] args) {
 
         InputParsing parse = new InputParsing("data_scenarios_a_example.in");
         System.out.println(grid[0][0]);
         System.out.println(piazzabili);
+
         sortAntennas(piazzabili);
+
+        List<Antenna> alreadyPlacedAntenna = new HashSet<>();
+
+
+        boolean solutionIsFound = false;
 
         for (Antenna a : piazzabili) {
 
+            if (solutionIsFound) break; //TODO se non si può piazzare nulla, attivare il flag
 
             for (int j = 0; j < WIDTH; j++) {
                 for (int k = 0; k < HEIGTH; k++) {
 
 
-                    if (grid[j][k].isFree()) {
+                    if (grid[j][k].isFree()) { //free === return (cell.antenna != null)
                         Position currentPosition = new Position(j, k);
                         int score = computeHeuristic(currentPosition, a);
                         heuristicValues.put(currentPosition, score);
                     }
 
-
-
                 }
             }
 
             Position bestOne = pickBestPosition();
-            
 
+            //POSIZIONA L'ANTENNA
+                updateAndPlaceAntenna(a, bestOne);
 
+            //PULISCI e PREPARA PER NUOVA ITERAZIONE
+
+                //ricordati che hai piazzato questa antenna
+                alreadyPlacedAntenna.add(a);
+                //reset heuristic values
+                heuristicValues = new HashMap<>(); //garbage collector does the work
+
+        }
+
+        //OUTPUT STAGE
+
+        PrintWriter out = null;
+        try {
+            out = new PrintWriter("output.txt");
+        } catch (FileNotFoundException e) {
+            System.out.println("non va un cazzoo 🏻");
+            e.printStackTrace();
+        }
+
+        //numero antenne pia
+        out.println(alreadyPlacedAntenna.size());
+
+        /*
+        The output data has to be saved into a plain-text ASCII file.
+    The first line of the output contains one integer number:
+        • M0
+        : the number of antennas placed in the grid
+        The next M0
+        lines contains two space-separated integer numbers:
+        • idi
+        : the id of the i
+        th antenna to be placed
+        • AX[idi
+        ]: the x coordinate of the i
+        .th antenna
+• AY [idi
+]: the y coordinate of the i
+th antenna
+The antenna identifier is meant as the 0-based index of the antennas available
+from the input data.
+         */
+        for (int i = 0; i < alreadyPlacedAntenna.size(); i++) {
+            out.println(alreadyPlacedAntenna.(i));
 
         }
 
