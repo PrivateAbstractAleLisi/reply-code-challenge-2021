@@ -1,19 +1,18 @@
 package com.polimi.ingsw;
 
 import javax.lang.model.element.ModuleElement;
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.*;
+import java.nio.charset.Charset;
 import java.util.*;
 
-public class Main{
+public class Main {
 
     //case parameters
     public static int WIDTH, HEIGTH, N_BUILDINGS, M_AVA_ANTENNAS;
     public static int REWARD = 0;
-    public static Set<Antenna> piazzabili = new HashSet<>();
-
-
-
+    public static ArrayList<Antenna> piazzabili = new ArrayList<>();
+    public int placedAntennas = 0; //++ every time we place an antenna
+    public static ArrayList<SkyScraper> buildings = new ArrayList<>();
 
     //====================
 //=========MODEL======
@@ -26,7 +25,7 @@ public class Main{
         }
 
         boolean isFree() {
-            return (skyscr == null) && (antenna == null);
+            return (antenna == null);
         }
 
         SkyScraper skyscr;
@@ -73,15 +72,16 @@ public class Main{
         public void placeAntenna(int x, int y) {
             X_COORD = x;
             Y_COORD = y;
+            placedAntennas++;
         }
 
         //a negative integer, zero, or a positive integer as this object is less than,
         // equal to, or greater than the specified object.
         @Override
         public int compareTo(Antenna o) {
-            if(this.connectionSpeed < o.connectionSpeed)
+            if (this.connectionSpeed > o.connectionSpeed)
                 return -1;
-            else if(this.connectionSpeed == o.connectionSpeed)
+            else if (this.connectionSpeed == o.connectionSpeed)
                 return 0;
             else
                 return +1;
@@ -105,12 +105,21 @@ public class Main{
 
     //s(b) score of building
     public static int scoreBuilding(SkyScraper b) {
-        return scoreAntennaBuilding(b.coveredBy,b);
+        return scoreAntennaBuilding(b.coveredBy, b);
     }
 
-    public static int reward() {
+    public static int getReward() {
+        for (int row = 0; row < grid.length; row++) {
+            for (int col = 0; col < grid[row].length; col++) {
+                if(grid[row][col].skyscr.coveredBy == null)
+                    return 0;
+            }
+        }
+        return REWARD;
+    }
 
-        for(int i)
+    public static int totalScore() {
+
     }
 
     //r(b)
@@ -141,26 +150,6 @@ public class Main{
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //=============================================================//
 // ===================== INPUT PARSING ========================//
 // ============================================================//
@@ -185,7 +174,6 @@ public class Main{
                 }
 
 
-
                 N_BUILDINGS = stream.nextInt();
                 System.out.println(N_BUILDINGS);
                 M_AVA_ANTENNAS = stream.nextInt();
@@ -195,7 +183,7 @@ public class Main{
 
                 //CREATE BUILDINGS
                 for (int j = 0; j < N_BUILDINGS; j++) {
-                    Integer x, y,l,c;
+                    Integer x, y, l, c;
                     x = stream.nextInt();
                     y = stream.nextInt();
                     l = stream.nextInt();
@@ -215,13 +203,66 @@ public class Main{
         }
     }
 
+//=============================================================//
+// ===================OUTPUT===================================//
+// ============================================================//
+
+    //writeFile("./test.txt")
+    private static Charset UTF8 = Charset.forName("UTF-8");
+
+    public static void writeFile(String path) throws IOException {
+        Writer writer = new OutputStreamWriter(new FileOutputStream(path), UTF8);
+        writer.write(placedAntennas);
+        writer.write("\n");
+
+    }
+
+
+
+    static int computeHeuristic(Position pos, Antenna a) {
+        return 0;
+    }
+
+    static class Position {
+        public int x, y;
+
+        public Position(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    static Map<Position, Integer> heuristicValues;
+    static List<Position> sortedPositions = new SortedList<>();
 
     public static void main(String[] args) {
 
         InputParsing parse = new InputParsing("data_scenarios_a_example.in");
         System.out.println(grid[0][0]);
         System.out.println(piazzabili);
-        sort
+        sortAntennas(piazzabili);
+
+        for (Antenna a : piazzabili) {
+
+
+            for (int j = 0; j < WIDTH; j++) {
+                for (int k = 0; k < HEIGTH; k++) {
+
+
+                    if (grid[j][k].isFree()) {
+                        Position currentPosition = new Position(j, k);
+                        int score = computeHeuristic(currentPosition, a);
+                        heuristicValues.put(currentPosition, score);
+                    }
+
+
+                }
+            }
+
+
+
+
+        }
 
     }
 }
