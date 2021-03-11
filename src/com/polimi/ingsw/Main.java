@@ -92,11 +92,11 @@ public class Main {
     }
 
     //
-    public static void updateAndPlaceAntenna (Antenna a, Position pos) {
+    public static void updateAndPlaceAntenna(Antenna a, Position pos) {
         a.placeAntenna(pos.x, pos.y);
-       // placedAntennas++;
+        // placedAntennas++;
         grid[pos.x][pos.y].antenna = a;
-        assert(grid[pos.x][pos.y].antenna != null);
+        assert (grid[pos.x][pos.y].antenna != null);
 
     }
 
@@ -166,10 +166,10 @@ public class Main {
         int distance = Math.abs(x1.x - x2.x) + Math.abs(x1.y - x2.y);
         return distance;
     }
+
     public static void sortAntennas(ArrayList<Antenna> list) {
         list.sort((o1, o2) -> o1.compareTo(o2));
     }
-
 
 
 //=============================================================//
@@ -210,7 +210,7 @@ public class Main {
                     y = stream.nextInt();
                     l = stream.nextInt();
                     c = stream.nextInt();
-                    SkyScraper sky =new SkyScraper(l, c, x, y);
+                    SkyScraper sky = new SkyScraper(l, c, x, y);
                     grid[x][y].skyscr = sky;
                     buildings.add(sky);
                 }
@@ -232,32 +232,23 @@ public class Main {
 // ===================OUTPUT===================================//
 // ============================================================//
 
-    //writeFile("./test.txt")
-    private static Charset UTF8 = Charset.forName("UTF-8");
-
-    public static void writeFile(String path) throws IOException {
-        Writer writer = new OutputStreamWriter(new FileOutputStream(path), UTF8);
-        writer.write(placedAntennas);
-        writer.write("\n");
-        writer.write();
-
-    }
 
     // Data la posizione pos dell'antenna a, calcolo il punteggio di quell'antenna rispetto a
     // tutti i building tali per cui lo score per la coppia (antenna,building) è migliore.
     static int computeHeuristic(Position pos, Antenna a) {
 
-        int heuristicScore = 0;
-        for(SkyScraper b : buildings) {
-            int distance = distManhattan(new Position(b.X_COORD,b.Y_COORD), pos);
-            if(distance > a.range)
+        int heuristicScore = -1;
+        for (SkyScraper b : buildings) {
+            int distance = distManhattan(new Position(b.X_COORD, b.Y_COORD), pos);
+            if (distance > a.range)
                 continue;
             Antenna tempAnt = new Antenna(a.range, a.connectionSpeed, a.id);
-            tempAnt.placeAntenna(pos.x,pos.y);
+            tempAnt.placeAntenna(pos.x, pos.y);
             int score = scoreAntennaBuilding(tempAnt, b);
-            if(score > scoreAntennaBuilding(b.coveredBy, b))
-               heuristicScore = heuristicScore +  score; //better score
-
+            if (b.coveredBy == null)
+                heuristicScore = heuristicScore + scoreAntennaBuilding(a, b);
+            else if (score > scoreAntennaBuilding(b.coveredBy, b))
+                heuristicScore = heuristicScore + score; //better score
         }
         return heuristicScore;
     }
@@ -276,7 +267,7 @@ public class Main {
 
     public static Position pickBestPosition() {
 
-        Position best = new Position(0,0);
+        Position best = new Position(0, 0);
         Integer currentBestValue = -1;
         for (Position cur : heuristicValues.keySet()) {
             if (heuristicValues.get(cur) > currentBestValue) {
@@ -289,17 +280,12 @@ public class Main {
     }
 
 
-
     public static void main(String[] args) {
 
         InputParsing parse = new InputParsing("data_scenarios_a_example.in");
-        System.out.println(grid[0][0]);
-        System.out.println(piazzabili);
-
         sortAntennas(piazzabili);
 
-        List<Antenna> alreadyPlacedAntenna = new HashSet<>();
-
+        List<Antenna> alreadyPlacedAntenna = new ArrayList<>();
 
         boolean solutionIsFound = false;
 
@@ -310,11 +296,11 @@ public class Main {
             for (int j = 0; j < WIDTH; j++) {
                 for (int k = 0; k < HEIGTH; k++) {
 
-
                     if (grid[j][k].isFree()) { //free === return (cell.antenna != null)
                         Position currentPosition = new Position(j, k);
                         int score = computeHeuristic(currentPosition, a);
                         heuristicValues.put(currentPosition, score);
+
                     }
 
                 }
@@ -323,52 +309,57 @@ public class Main {
             Position bestOne = pickBestPosition();
 
             //POSIZIONA L'ANTENNA
-                updateAndPlaceAntenna(a, bestOne);
+            updateAndPlaceAntenna(a, bestOne);
+            //da fare: updateCoveredBy(Position whereIllPlaceTheAntenna);
+
+            for (SkyScraper b : buildings) {
+                int distance = distManhattan(new Position(b.X_COORD, b.Y_COORD), bestOne);
+                if (distance > a.range)
+                    continue;
+                b.coveredBy = a;
+
+            }
 
             //PULISCI e PREPARA PER NUOVA ITERAZIONE
 
-                //ricordati che hai piazzato questa antenna
-                alreadyPlacedAntenna.add(a);
-                //reset heuristic values
-                heuristicValues = new HashMap<>(); //garbage collector does the work
+            //ricordati che hai piazzato questa antenna
+            alreadyPlacedAntenna.add(a);
+            //reset heuristic values
+            heuristicValues = new HashMap<>(); //garbage collector does the work
 
         }
 
         //OUTPUT STAGE
 
         PrintWriter out = null;
+
         try {
             out = new PrintWriter("output.txt");
         } catch (FileNotFoundException e) {
-            System.out.println("non va un cazzoo 🏻");
             e.printStackTrace();
         }
 
+
         //numero antenne pia
         out.println(alreadyPlacedAntenna.size());
+        out.flush();
 
         /*
         The output data has to be saved into a plain-text ASCII file.
     The first line of the output contains one integer number:
-        • M0
-        : the number of antennas placed in the grid
+            • M0: the number of antennas placed in the grid
         The next M0
         lines contains two space-separated integer numbers:
-        • idi
-        : the id of the i
+        • idi: the id of the i
         th antenna to be placed
-        • AX[idi
-        ]: the x coordinate of the i
-        .th antenna
-• AY [idi
-]: the y coordinate of the i
-th antenna
+        • AX[idi]: the x coordinate of the ith antenna
+    • AY [idi]: the y coordinate of the ith antenna
 The antenna identifier is meant as the 0-based index of the antennas available
 from the input data.
          */
         for (int i = 0; i < alreadyPlacedAntenna.size(); i++) {
-            out.println(alreadyPlacedAntenna.(i));
-
+            out.println(alreadyPlacedAntenna.get(i).id + "  " + alreadyPlacedAntenna.get(i).X_COORD + "  " + alreadyPlacedAntenna.get(i).Y_COORD);
+            out.flush();
         }
 
     }
